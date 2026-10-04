@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { z } from "zod";
+import { AiUnavailableError } from "./errors";
 import { SYSTEM_PROMPT } from "./prompts";
 
 export const AI_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
@@ -18,7 +19,7 @@ function getClient() {
   return client;
 }
 
-export class AiUnavailableError extends Error {}
+export { AiUnavailableError };
 
 /**
  * One structured-output call. Returns the schema-parsed object, or throws.

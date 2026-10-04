@@ -33,7 +33,7 @@ It is a pre-deployment behavioural stress test. The simulated profiles do not st
 | Step | Who |
 |---|---|
 | Simulation, telemetry, problem detection | Deterministic code (seeded PRNG) |
-| Diagnosis, hypotheses, the 3 candidate interventions | **Claude** (`claude-opus-5-5`, structured outputs) |
+| Diagnosis, hypotheses, the 3 candidate interventions | **LLM**: Claude (`claude-opus-5-5`) if `ANTHROPIC_API_KEY` is set, otherwise OpenAI (`gpt-6.1-sol`) if `OPENAI_API_KEY` is set. Both use strict structured outputs. |
 | Validation of model output | Code: known params only, numeric, clamped to bounds, ≤ 3 changes, mixes renormalised to 100, near-duplicates rejected |
 | Ranking and winner selection | Deterministic code |
 | Verification (VERIFIED / FAILED) | Deterministic code |
@@ -78,8 +78,10 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:4599 ANTHROPIC_API_KEY=mock npm start
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | for real AI | none | Server-side only. Without it the app runs in labelled fallback mode. |
-| `ANTHROPIC_MODEL` | no | `claude-opus-5-5` | Model used by the AI experimenter. |
+| `ANTHROPIC_API_KEY` | one of these two, for real AI | none | Server-side only. Preferred provider when set. |
+| `OPENAI_API_KEY` | one of these two, for real AI | none | Server-side only. Used when no Anthropic key is set. With neither key the app runs in labelled fallback mode. |
+| `ANTHROPIC_MODEL` | no | `claude-opus-5-5` | Claude model for the AI experimenter. |
+| `OPENAI_MODEL` | no | `gpt-6.1-sol` | OpenAI model for the AI experimenter (Responses API, low reasoning effort). |
 | `PATCHRUN_AI_TIMEOUT_MS` | no | `30000` | Per-call timeout before falling back. |
 
 ## Deploy (Vercel)
@@ -87,7 +89,7 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:4599 ANTHROPIC_API_KEY=mock npm start
 ```bash
 npm i -g vercel
 vercel link
-vercel env add ANTHROPIC_API_KEY production
+vercel env add ANTHROPIC_API_KEY production   # or OPENAI_API_KEY
 vercel --prod
 ```
 
@@ -103,7 +105,7 @@ lib/simulation/                   shared types + generic ScenarioEngine / runCou
 lib/scenarios/encounter/          config, population, simulate, evaluate, rank, fallback
 lib/scenarios/battleRoyale/       config, population, simulate, evaluate, rank, fallback
 lib/scenarios/engines.ts          both scenarios implementing ScenarioEngine
-lib/ai/                           prompts + schemas, validation, Anthropic client, orchestration
+lib/ai/                           prompts + schemas, validation, Anthropic/OpenAI clients, provider selection, orchestration
 components/                       UI (shell, timeline, AI panels, per-scenario views)
 tests/                            vitest acceptance tests (incl. mock-API SDK integration)
 ```

@@ -1,12 +1,10 @@
-import { AI_MODEL, aiConfigured, proposeWithClaude } from "@/lib/ai/anthropic";
 import { generateBattleRoyaleExperiment, generateEncounterExperiment } from "@/lib/ai/experimenter";
+import { activeProvider } from "@/lib/ai/provider";
 import { BOT_ARCHETYPES, DEFAULT_BOT_MIX, DEFAULT_OBJECTIVE, OBJECTIVES, type ObjectiveId } from "@/lib/scenarios/battleRoyale/config";
 import { DEFAULT_ENCOUNTER_CONFIG, DEFAULT_ENCOUNTER_OBJECTIVE, ENCOUNTER_PARAMS, ENCOUNTER_PARAM_ORDER, type EncounterConfig } from "@/lib/scenarios/encounter/config";
 import type { BotMix } from "@/lib/simulation/types";
 
 export const maxDuration = 60;
-
-const provider = () => ({ provider: "anthropic", model: AI_MODEL, configured: aiConfigured() });
 
 function parseSeed(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
@@ -37,7 +35,8 @@ function parseMix(v: unknown): BotMix {
 }
 
 export async function GET() {
-  return Response.json({ ai: provider() });
+  const { provider, model, configured } = activeProvider();
+  return Response.json({ ai: { provider, model, configured } });
 }
 
 export async function POST(request: Request) {
@@ -48,16 +47,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const seed = parseSeed(body.seed);
-  const propose = aiConfigured() ? proposeWithClaude : null;
+  const { propose, ...provider } = activeProvider();
 
   if (body.scenarioId === "encounter") {
     const objective = typeof body.objective === "string" && body.objective.trim() ? body.objective.slice(0, 400) : DEFAULT_ENCOUNTER_OBJECTIVE;
-    const result = await generateEncounterExperiment({ config: parseEncounterConfig(body.config), seed, objective }, propose, provider());
+    const result = await generateEncounterExperiment({ config: parseEncounterConfig(body.config), seed, objective }, propose, provider);
     return Response.json(result);
   }
   if (body.scenarioId === "battleRoyale") {
     const objective = (typeof body.objective === "string" && body.objective in OBJECTIVES ? body.objective : DEFAULT_OBJECTIVE) as ObjectiveId;
-    const result = await generateBattleRoyaleExperiment({ mix: parseMix(body.config), seed, objective }, propose, provider());
+    const result = await generateBattleRoyaleExperiment({ mix: parseMix(body.config), seed, objective }, propose, provider);
     return Response.json(result);
   }
   return Response.json({ error: "Unknown scenarioId" }, { status: 400 });

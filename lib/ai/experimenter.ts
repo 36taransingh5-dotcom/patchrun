@@ -61,7 +61,7 @@ function bilingualOutput(o: ModelOutput): { diagnosis: L10n; evidence: L10n[] } 
   return { diagnosis: { en: d, zh: str(o.diagnosisZh, 600) || d }, evidence: en.map((e, i) => ({ en: e, zh: zh[i] || e })) };
 }
 
-const NO_PROVIDER = L("No AI provider configured (set ANTHROPIC_API_KEY).", "未配置 AI 服务（请设置 ANTHROPIC_API_KEY）。");
+const NO_PROVIDER = L("No AI provider configured (set ANTHROPIC_API_KEY or OPENAI_API_KEY).", "未配置 AI 服务（请设置 ANTHROPIC_API_KEY 或 OPENAI_API_KEY）。");
 const aiFailed = (msg: string) => L(`AI request failed: ${msg}`, `AI 请求失败：${msg}`);
 const aiInvalid = (errs: string) => L(`AI output failed validation: ${errs}`, `AI 输出未通过校验：${errs}`);
 const partial = (n: number, noun: L10n) =>
