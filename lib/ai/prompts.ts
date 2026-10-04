@@ -17,7 +17,8 @@ You do not choose a winner, predict scores, or declare success. PATCHRUN re-simu
 Rules for candidates:
 - Exactly 3 candidates. Each must test a genuinely different hypothesis (different mechanism or lever), not three sizes of the same tweak.
 - Stay inside the allowed parameters and bounds. Values outside bounds will be clamped or rejected.
-- Prefer small, targeted interventions. Explain the trade-off each one risks.
+- Prefer small, targeted interventions, but make sure each one is plausibly large enough to meet the acceptanceCriteria. Spread your three candidates across different levels of boldness rather than three cautious tweaks.
+- Explain the trade-off each one risks.
 - The telemetry describes simulated behavioural profiles, not real players. Do not claim predictions about real humans.
 - Keep text concise: name ≤ 4 words, hypothesis ≤ 1 sentence, reasoning ≤ 2 sentences.
 - The interface is bilingual. Every prose field has a *Zh twin (e.g. name / nameZh): write the English field in English and the Zh field as a natural Simplified Chinese translation of it. Keep numbers and parameter identifiers unchanged.`;
@@ -75,6 +76,37 @@ export const BattleRoyaleOutputSchema = z.object({
   ),
 });
 
+// ───────────── Acceptance criteria ─────────────
+// What the deterministic verifier will check (mirrors lib/scenarios/*/rank.ts).
+// Shared with the model so proposals are calibrated to the bar; the model
+// never sees scores, and simulation alone decides the winner.
+
+const ENCOUNTER_ACCEPTANCE = [
+  "Problem-stage hazard (failures ÷ entrants) at or below 25%, and below 28% on three held-out seeds",
+  "Problem stage holds under 50% of all failures",
+  "Novice and average simulated survival each improve by ≥ 15 percentage points",
+  "Skilled simulated survival stays ≤ 95% and does not drop",
+  "Overall simulated survival stays ≤ 80% (encounter must not become trivial)",
+  "No other stage exceeds 35% hazard",
+  "Smaller, targeted changes score higher than broad global nerfs",
+];
+
+const BR_ACCEPTANCE: Record<ObjectiveId, string[]> = {
+  beginner_onboarding: ["NEW early elimination drops by ≥ 15 percentage points (ideally to ≤ 50%)"],
+  competitive_pressure: ["SKILLED late-game encounters per profile rise by ≥ 10%"],
+  faster_matches: ["Share of top-10 placements that never fought drops by ≥ 8 percentage points"],
+  balanced_population: ["SKILLED–NEW average survival-phase gap narrows by ≥ 0.3 phases"],
+};
+
+const BR_GUARDRAILS = [
+  "Encounter rate stays ≥ 65% of baseline (meaningful combat preserved)",
+  "SKILLED late-game pressure stays ≥ 75% of baseline",
+  "Bots still cause ≥ 40% of human combat eliminations (bots not harmless)",
+  "Top-10 placements that never fought stay ≤ 65%",
+  "At least 3 archetypes at ≥ 10% share",
+  "Improvement must hold on three held-out seed families",
+];
+
 // ───────────── Structured inputs ─────────────
 
 export function encounterAiInput(config: EncounterConfig, t: EncounterTelemetry, finding: Finding, objective: string) {
@@ -95,6 +127,7 @@ export function encounterAiInput(config: EncounterConfig, t: EncounterTelemetry,
       ),
     },
     deterministicFinding: { title: finding.title.en, lines: finding.lines.map((l) => l.en), evidence: finding.evidence },
+    acceptanceCriteria: ENCOUNTER_ACCEPTANCE,
     telemetry: {
       seed: t.seed,
       players: t.playerCount,
@@ -124,6 +157,7 @@ export function battleRoyaleAiInput(mix: BotMix, objective: ObjectiveId, t: Batt
       ),
     },
     deterministicFinding: { title: finding.title.en, lines: finding.lines.map((l) => l.en), evidence: finding.evidence },
+    acceptanceCriteria: [...BR_ACCEPTANCE[objective], ...BR_GUARDRAILS],
     telemetry: {
       seed: t.seed,
       matches: t.matches,
